@@ -1,88 +1,17 @@
-// Store a list of test cases (function names).
+// Test Runner
+// Richard Helgeby
 
-// Store test states.
-	// set next test
-	// navigate to and continue with a certain test
+// Credits/Sources:
+// JUnit
 
-// Loop through tests, continue from last time.
-
-// Function to init testing (reset progress).
-
-// Assert functions: will update state for the current test.
-
-//var numTests = 0;
-//var testsPassed = 0;
-//var errors;	// String array.
 
 /**
- * @param tests				List of functions (test cases).
- * @param resultContainer	Element in HTML page to write result.
+ * Constructs a test result object.
+ * 
+ * @param name		Test name.
+ * @param passed	Whether the test passed.
+ * @param msg		Test result message.
  */
-/*function startTestRunner(tests, resultContainer)
-{
-	runTests(tests);
-	buildResults(resultContainer);
-}*/
-
-/*function runTests(tests)
-{
-	var results = new Array();
-	numTests = 0;
-	testsPassed = 0;
-	errors = new Array();
-	
-	for (funcName in tests)
-	{
-		console.log("Evaluating " + funcName);
-		
-		if (funcName.indexOf("test") >= 0)
-		{
-			numTests++;
-			console.log("Calling " + funcName);
-			var result = tests[funcName]();
-			
-			// catch exception
-			
-			if (result == true)
-			{
-				testsPassed++;
-			}
-			else
-			{
-				errors.push(funcName);
-			}
-			results.push(result);
-		}
-	}
-}*/
-
-function runTest(func)
-{
-	
-}
-
-/*function buildResults(containerElement)
-{
-	html =  "<p>Tests executed: " + numTests + "<br />";
-	html += "Tests passed: " + testsPassed + "<br />";
-	html += "Tests failed: " + (numTests - testsPassed) + "</p>";
-	
-	html += "<p>Errors:</p><ul>";
-	for (i in errors)
-	{
-		html+= "<li>" + errors[i] + "</li>";
-	}
-	
-	html += "<ul>";
-	containerElement.innerHTML = html;
-}*/
-
-
-// ------------------------------------------------------------------------------------------------
-
-// Credits:
-// Some inspiration from JUnit.
-
 function TestResult(name, passed, msg)
 {
 	this.name = name;
@@ -94,11 +23,12 @@ function TestResult(name, passed, msg)
 /**
  * Constructs a test runner.
  * 
- * @param init		(bool) Whether this is the initial run of tests (first page).
+ * @param tests				Array of test functions.
+ * @param resultElement		(Optional) HTML container element used to display results.
  * 
  * @constructor
  */
-function TestRunner(tests, resultElement, init)
+function TestRunner(tests, resultElement)
 {
 	/**
 	 * Array of test functions.
@@ -108,26 +38,22 @@ function TestRunner(tests, resultElement, init)
 	 */
 	this.tests = tests;
 	
-	/** Array of tests executed (strings of function names). */
-	this.testsExecuted = new Array();
-	
-	/** Error of failed tests (TestResult objects). */
-	this.errors = new Array();
-	
 	/** Result element container for printing results. */
 	this.resultElement = resultElement;
 	
-	/** Whether the test runner state will be loaded from storage when tests are executed. */
-	//this.loadState = !init;
+	// Initialize test session state.
+	this.initState();
 	
-	this.numExecuted = 0;
-	this.numPassed = 0;
-	
-	/*if (!init)
+	// Load state if test session is active.
+	this.loadState();
+}
+
+TestRunner.prototype.verifyJSON = function()
+{
+	if (typeof JSON === "undefined")
 	{
-		// Not initializing, load test state from previous page.
-		this.loadState();
-	}*/
+		throw "Missing JSON implementation.";
+	}
 }
 
 /**
@@ -135,11 +61,27 @@ function TestRunner(tests, resultElement, init)
  */
 TestRunner.prototype.loadState = function()
 {
-	/* Load saved state:
-	 * - (test array?)
-	 * - tests executed
-	 * - counters
-	 */
+	this.verifyJSON();
+	
+	// Verify that a test session is active.
+	if (!sessionStorage.testRunnerActive)
+	{
+		// Don't load states when test runner was just loaded.
+		return;
+	}
+	
+	var json = sessionStorage.testRunnerState;
+	
+	console.log("Saved state: " + json);
+	
+	if (json)
+	{
+		var state = JSON.parse(json);
+		this.testsExecuted = state.testsExecuted;
+		this.errors = state.errors;
+		this.numExecuted = state.numExecuted;
+		this.numPassed = state.numPassed;
+	}
 }
 
 /**
@@ -147,7 +89,43 @@ TestRunner.prototype.loadState = function()
  */
 TestRunner.prototype.saveState = function()
 {
+	var state = {};
+	state.testsExecuted = this.testsExecuted;
+	state.errors = this.errors;
+	state.numExecuted = this.numExecuted;
+	state.numPassed = this.numPassed;
 	
+	var json = JSON.stringify(state);
+	console.log(json);
+	sessionStorage.testRunnerState = json;
+	
+	// save test phase
+}
+
+/**
+ * Resets a test session.
+ * 
+ * Note: A session is automatically started when the testing is started.
+ */
+TestRunner.prototype.resetSession = function()
+{
+	sessionStorage.testRunnerActive = false;
+	sessionStorage.testRunnerState = "";
+	
+	// Erase old test runner state.
+	this.initState();
+}
+
+/**
+ * Initializes test states
+ */
+TestRunner.prototype.initState = function()
+{
+	this.testsExecuted = new Array();
+	this.errors = new Array();
+	
+	this.numExecuted = 0;
+	this.numPassed = 0;
 }
 
 /**
@@ -159,11 +137,24 @@ TestRunner.prototype.run = function()
 	var before = tests["before"];
 	var after = tests["after"];
 	
+	// Activate test session.
+	sessionStorage.testRunnerActive = true;
+	
 	for (funcName in this.tests)
 	{
 		// Only execute functions starting with "test".
 		if (funcName.indexOf("test") >= 0)
 		{
+			// Check if this test is already executed.
+			if (this.testsExecuted.indexOf(funcName) >= 0)
+			{
+				console.log("Test " + funcName + " already executed this session, skipping.");
+				continue;
+			}
+			
+			// Save current state in case a test navigate away from the page.
+			testRunner.saveState();
+			
 			if (typeof before === "function")
 			{
 				before();
@@ -192,13 +183,15 @@ TestRunner.prototype.run = function()
 		}
 	}
 	
+	testRunner.saveState();
+	
 	this.displayResults(this.resultElement);
 }
 
 /**
  * Executes a test.
  * 
- * @param testName		Name of the test function.
+ * @param testName		Test function name.
  * @return				TestResult object.
  */
 TestRunner.prototype.runTest = function(testName)
@@ -218,7 +211,19 @@ TestRunner.prototype.runTest = function(testName)
 	catch (err)
 	{
 		// Assertion failed.
-		msg = err;
+		if (typeof err === "string")
+		{
+			msg = err;
+		}
+		else if (typeof err === "object")
+		{
+			msg = err.message;
+		}
+		else
+		{
+			msg = "No error message.";
+		}
+		
 	}
 	
 	return new TestResult(testName, passed, msg);
@@ -226,6 +231,13 @@ TestRunner.prototype.runTest = function(testName)
 
 TestRunner.prototype.displayResults = function(element)
 {
+	// Redirect to result page.
+	
+	if (typeof element === "undefined")
+	{
+		return;
+	}
+	
 	var html =  "<p>Tests executed: " + this.numExecuted + "<br />";
 	html += "Tests passed: " + this.numPassed + "<br />";
 	html += "Tests failed: " + (this.numExecuted - this.numPassed) + "</p>";
@@ -235,7 +247,7 @@ TestRunner.prototype.displayResults = function(element)
 	{
 		html+= "<li>" + this.errors[i].name + ": " + this.errors[i].msg + "</li>";
 	}
-	
 	html += "<ul>";
+	
 	element.innerHTML = html;
 }

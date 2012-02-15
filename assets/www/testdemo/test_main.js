@@ -3,7 +3,7 @@ testRunner = new TestRunner();
 
 function prepareRunner()
 {
-	testRunner = new TestRunner(tests, document.getElementById("results"), true);
+	testRunner = new TestRunner(tests, document.getElementById("results"), false);
 	console.log("TestRunner ready.");
 }
 
@@ -44,3 +44,17 @@ tests.testBeep = function()
 {
 	beep(2);
 }
+
+/*tests.testBenchmark = function()
+{
+	var a = 0;
+	var b = 0;
+	var c = 0;
+	
+	for (var i = 0; i < 10000000; i++)
+	{
+		a = i * 2;
+		b = a * a;
+		c = a + b;
+	}
+}*/
