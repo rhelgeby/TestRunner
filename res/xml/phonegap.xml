@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<phonegap>
+    <access origin="http://127.0.0.1*"/>
+    <access origin="http://192.168.1.128*"/>
+    <access origin="file:///android_asset/www/*"/>
+    <access origin="http://www.uio.no/tjenester/it/nett/fastnett/nix/"/>
+    <log level="DEBUG"/>
+</phonegap>

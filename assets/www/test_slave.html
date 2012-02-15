@@ -1,0 +1,22 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<!-- meta http-equiv="refresh" content="1;url=http://192.168.1.128:8000/capture" -->
+	<script type="text/javascript" charset="utf-8" src="phonegap-1.3.0.js"></script>
+	<script type="text/javascript" charset="utf-8" src="childbrowser.js"></script>
+	
+	<script type="text/javascript">
+	function startCapture()
+	{
+		document.getElementById("status").innerHTML = "Loading test capture page...";
+		/*window.plugins.childBrowser.openExternal("http://192.168.1.128:8000", true);*/
+		window.plugins.childBrowser.openExternal("file:///android_asset/www/frame_test.html", true);
+	}
+	</script> 
+</head>
+
+<body>
+	<p id="status">Initializing...</p>
+	<button type="button" onclick="startCapture()">Start capture</button>
+</body>
+</html>
