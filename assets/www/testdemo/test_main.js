@@ -1,23 +1,47 @@
-tests = {};
+//tests = {};
 testRunner = new TestRunner();
+
+tests =
+[
+	new TestCase("test1", "index.html",
+	[
+		function()
+		{
+			console.log("Phase 1 of test1 executed.");
+		},
+		function()
+		{
+			console.log("Phase 2 of test1 executed.");
+		}
+	]),
+	
+	new TestCase("testBeep", "index.html", 
+	[
+ 		function phase1()
+ 		{
+ 			console.log("testBeep executed.");
+ 			beep(2);
+ 		}
+ 	])
+];
 
 function prepareRunner()
 {
-	testRunner = new TestRunner(tests, document.getElementById("results"), false);
+	testRunner = new TestRunner(tests, document.getElementById("results"));
 	console.log("TestRunner ready.");
 }
 
-tests.before = function()
+function beforeTest()
 {
 	console.log("before");
 }
 
-tests.after = function()
+function afterTest()
 {
 	console.log("after");
 }
 
-tests.testClickButton = function()
+/*tests.testClickButton = function()
 {
 	console.log("click button");
 	var button = document.getElementById("myButton");
@@ -43,7 +67,7 @@ tests.testVibrate = function()
 tests.testBeep = function()
 {
 	beep(2);
-}
+}*/
 
 /*tests.testBenchmark = function()
 {

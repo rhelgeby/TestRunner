@@ -4,6 +4,15 @@
 // Credits/Sources:
 // JUnit
 
+/*
+ * TODO:
+ * - potential performance problem with test loop and isTestExecuted - O(n^2)
+ */
+
+/* Test phases:
+ * - make sure correct initial page is loaded before each test
+ * - phase naming convention
+ */
 
 /**
  * Constructs a test result object.
@@ -21,31 +30,63 @@ function TestResult(name, passed, msg)
 
 
 /**
+ * Constructs a test case.
+ * 
+ * A test case may have multiple test phases if it needs to change page
+ * 
+ * @param name			Test name.
+ * @param initialPage	Initial page to load.
+ * @param phases		Array with functions for each test phase. Functions must be named "phase"
+ * 						followed by a number ("phase1", "phase2", etc.) to assure correct execution
+ * 						order.
+ */
+function TestCase(name, initialPage, phases)
+{
+	this.name = name;
+	this.page = initialPage;
+	this.phases = phases;
+}
+
+
+/**
  * Constructs a test runner.
  * 
- * @param tests				Array of test functions.
+ * @param tests				Array of TestCase objects.
  * @param resultElement		(Optional) HTML container element used to display results.
+ * @param before			(Optional) Function executed before every test.
+ * @param after				(Optional) Function executed after every test.
  * 
  * @constructor
  */
-function TestRunner(tests, resultElement)
+function TestRunner(tests, resultElement, before, after)
 {
-	/**
-	 * Array of test functions.
-	 * 
-	 * A test function is prefixed by "test". If function "before" or "after" exists they will
-	 * be executed before and after each test respectively.
-	 */
 	this.tests = tests;
 	
-	/** Result element container for printing results. */
 	this.resultElement = resultElement;
+	
+	this.before = before;
+	this.after = after;
 	
 	// Initialize test session state.
 	this.initState();
 	
-	// Load state if test session is active.
+	// Load previous state if test session is active.
 	this.loadState();
+}
+
+/**
+ * Initializes test states.
+ */
+TestRunner.prototype.initState = function()
+{
+	this.testsExecuted = new Array();
+	this.errors = new Array();
+	
+	this.numExecuted = 0;
+	this.numPassed = 0;
+	
+	this.currentTest = "";
+	this.currentPhase = 0;
 }
 
 TestRunner.prototype.verifyJSON = function()
@@ -72,7 +113,7 @@ TestRunner.prototype.loadState = function()
 	
 	var json = sessionStorage.testRunnerState;
 	
-	console.log("Saved state: " + json);
+	//console.log("Saved state: " + json);
 	
 	if (json)
 	{
@@ -81,6 +122,8 @@ TestRunner.prototype.loadState = function()
 		this.errors = state.errors;
 		this.numExecuted = state.numExecuted;
 		this.numPassed = state.numPassed;
+		this.currentTest = state.currentTest;
+		this.currentPhase = state.currentPhase;
 	}
 }
 
@@ -94,12 +137,12 @@ TestRunner.prototype.saveState = function()
 	state.errors = this.errors;
 	state.numExecuted = this.numExecuted;
 	state.numPassed = this.numPassed;
+	state.currentTest = this.currentTest;
+	state.currentPhase = this.currentPhase;
 	
 	var json = JSON.stringify(state);
-	console.log(json);
+	//console.log(json);
 	sessionStorage.testRunnerState = json;
-	
-	// save test phase
 }
 
 /**
@@ -117,15 +160,71 @@ TestRunner.prototype.resetSession = function()
 }
 
 /**
- * Initializes test states
+ * Returns whether a test is executed.
  */
-TestRunner.prototype.initState = function()
+TestRunner.prototype.isTestExecuted = function(testName)
 {
-	this.testsExecuted = new Array();
-	this.errors = new Array();
+	return this.testsExecuted.indexOf(testName) >= 0;
+}
+
+/**
+ * Gets the next test that's not yet started.
+ * 
+ * @returns		TestCase object if found, null otherwise.
+ */
+TestRunner.prototype.getNextTest = function()
+{
+	for (var i in this.tests)
+	{
+		var testCase = this.tests[i];
+		if (testCase instanceof TestCase)
+		{
+			if (!this.isTestExecuted(testCase.name))
+			{
+				return testCase;
+			}
+		}
+		else
+		{
+			throw "Invalid object type in tests array. Must be a TestCase.";
+		}
+	}
 	
-	this.numExecuted = 0;
-	this.numPassed = 0;
+	return null;
+}
+
+/**
+ * Gets a test case.
+ * 
+ * @name		Test name.
+ * 
+ * @returns		TestCase object, or null if not found.
+ */
+TestRunner.prototype.getTestByName = function(testName)
+{
+	for (var i in this.tests)
+	{
+		var testCase = this.tests[i];
+		if (testCase.name == testName)
+		{
+			return testCase;
+		}
+	}
+}
+
+/**
+ * Loads the initial page of a test case.
+ * 
+ * @param testCase		TestCase object.
+ */
+TestRunner.prototype.loadInitialPage = function(testCase)
+{
+	if (!testCase || !(testCase instanceof TestCase))
+	{
+		throw "Invalid test case.";
+	}
+	
+	window.location.href = testCase.page;
 }
 
 /**
@@ -137,16 +236,78 @@ TestRunner.prototype.run = function()
 	var before = tests["before"];
 	var after = tests["after"];
 	
-	// Activate test session.
+	// Start test session.
 	sessionStorage.testRunnerActive = true;
 	
-	for (funcName in this.tests)
+	// Get active or next test case.
+	var testCase;
+	if (this.currentTest)
+	{
+		// Get current test case.
+		testCase = this.getTestByName(this.currentTest);
+		if (!testCase)
+		{
+			throw "Internal error: Invalid test name.";
+		}
+	}
+	else
+	{
+		testCase = this.getNextTest();
+		if (!testCase)
+		{
+			// No tests, or all tests done. Display results.
+			this.displayResults();
+			return;
+		}
+		
+		// Initialize test state.
+		this.currentTest = testCase.name;
+		this.currentPhase = 0;
+	}
+	
+	// Continue/run test.
+	var result = this.runTest(testCase);
+	
+	// (If this point is reached, the last test phase was executed or all were done in one page.)
+	
+	if (result.passed)
+	{
+		this.numPassed++;
+	}
+	else
+	{
+		this.errors.push(result);
+	}
+	
+	this.numExecuted++;
+	this.testsExecuted.push(testCase.name);
+	
+	// Get next test, check if done.	
+	testCase = this.getNextTest();
+	if (!testCase)
+	{
+		console.log("Testing done.");
+		
+		// Save state and display results in new page.
+		this.displayResults();
+		return;
+	}
+	
+	// Save state, and load the text test's initial page.
+	console.log ("Next test: " + testCase.name);
+	this.currentTest = testCase.name;
+	this.saveState();
+	this.loadInitialPage(testCase);
+	
+	// ---------------
+	
+	/*for (funcName in this.tests)
 	{
 		// Only execute functions starting with "test".
 		if (funcName.indexOf("test") >= 0)
 		{
 			// Check if this test is already executed.
-			if (this.testsExecuted.indexOf(funcName) >= 0)
+			if (this.isTestExecuted(funcName))
 			{
 				console.log("Test " + funcName + " already executed this session, skipping.");
 				continue;
@@ -175,7 +336,6 @@ TestRunner.prototype.run = function()
 			this.numExecuted++;
 			this.testsExecuted.push(funcName);
 			
-			
 			if (typeof after === "function")
 			{
 				after();
@@ -185,53 +345,84 @@ TestRunner.prototype.run = function()
 	
 	testRunner.saveState();
 	
-	this.displayResults(this.resultElement);
+	this.displayResults(this.resultElement);*/
 }
 
 /**
  * Executes a test.
  * 
- * @param testName		Test function name.
+ * @param testCase		TestCase object.
  * @return				TestResult object.
  */
-TestRunner.prototype.runTest = function(testName)
+TestRunner.prototype.runTest = function(testCase)
 {
-	console.log("Running " + funcName);
+	console.log("Running " + testCase.name + " from phase " + this.currentPhase);
 	
-	var passed = false;
+	// Get "before" and "after" functions.
+	var before = tests["before"];
+	var after = tests["after"];
+	
+	var testFunc = "";
+	var passed = true;		// The test case will fail if any phase fails.
 	var msg = "";
 	
-	try
+	// Execute "before" if the test was just started.
+	if (typeof before === "function" && this.currentPhase == 0)
 	{
-		// Execute the test.
-		this.tests[funcName]();
-	
-		passed = true;
+		before();
 	}
-	catch (err)
+	
+	// Loop through phases, starting from current phase.
+	while (typeof testCase.phases[this.currentPhase] === "function")
 	{
-		// Assertion failed.
-		if (typeof err === "string")
+		try
 		{
-			msg = err;
+			// Execute the test.
+			console.log("Running phase " + this.currentPhase);
+			testCase.phases[this.currentPhase]();
 		}
-		else if (typeof err === "object")
+		catch (err)
 		{
-			msg = err.message;
-		}
-		else
-		{
-			msg = "No error message.";
+			passed = false;
+			
+			// Assertion failed.
+			if (typeof err === "string")
+			{
+				msg = err;
+			}
+			else if (typeof err === "object")
+			{
+				msg = err.message;
+			}
+			else
+			{
+				msg = "No error message.";
+			}
+			
+			// Skip other phases.
+			break;
 		}
 		
+		// Next phase.
+		this.currentPhase++;
 	}
 	
-	return new TestResult(testName, passed, msg);
+	// TODO: does it reach this line even if a test load a new page? delays?
+	
+	this.currentPhase = 0;
+	
+	// Test case done or failed. Execute "after".
+	if (typeof after === "function")
+	{
+		after();
+	}
+	
+	return new TestResult(testCase.name, passed, msg);
 }
 
 TestRunner.prototype.displayResults = function(element)
 {
-	// Redirect to result page.
+	// TODO: Display results in its own page.
 	
 	if (typeof element === "undefined")
 	{
