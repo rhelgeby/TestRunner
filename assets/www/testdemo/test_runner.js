@@ -288,6 +288,9 @@ TestRunner.prototype.run = function()
 	{
 		console.log("Testing done.");
 		
+		// End test session (prepare for next run).
+		this.resetSession();
+		
 		// Save state and display results in new page.
 		this.displayResults();
 		return;
@@ -299,53 +302,6 @@ TestRunner.prototype.run = function()
 	this.saveState();
 	this.loadInitialPage(testCase);
 	
-	// ---------------
-	
-	/*for (funcName in this.tests)
-	{
-		// Only execute functions starting with "test".
-		if (funcName.indexOf("test") >= 0)
-		{
-			// Check if this test is already executed.
-			if (this.isTestExecuted(funcName))
-			{
-				console.log("Test " + funcName + " already executed this session, skipping.");
-				continue;
-			}
-			
-			// Save current state in case a test navigate away from the page.
-			testRunner.saveState();
-			
-			if (typeof before === "function")
-			{
-				before();
-			}
-			
-			// Execute test.
-			var result = this.runTest(funcName);
-			
-			if (result.passed)
-			{
-				this.numPassed++;
-			}
-			else
-			{
-				this.errors.push(result);
-			}
-			
-			this.numExecuted++;
-			this.testsExecuted.push(funcName);
-			
-			if (typeof after === "function")
-			{
-				after();
-			}
-		}
-	}
-	
-	testRunner.saveState();
-	
-	this.displayResults(this.resultElement);*/
 }
 
 /**
@@ -422,6 +378,8 @@ TestRunner.prototype.runTest = function(testCase)
 
 TestRunner.prototype.displayResults = function(element)
 {
+	this.saveState();
+	
 	// TODO: Display results in its own page.
 	
 	if (typeof element === "undefined")
