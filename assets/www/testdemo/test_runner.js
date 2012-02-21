@@ -256,6 +256,7 @@ TestRunner.prototype.run = function()
 		if (!testCase)
 		{
 			// No tests, or all tests done. Display results.
+			this.saveState();
 			this.displayResults();
 			return;
 		}
@@ -289,9 +290,11 @@ TestRunner.prototype.run = function()
 		console.log("Testing done.");
 		
 		// End test session (prepare for next run).
-		this.resetSession();
+		// TODO: don't erase results.
+		//this.resetSession();
 		
 		// Save state and display results in new page.
+		this.saveState();
 		this.displayResults();
 		return;
 	}
@@ -376,16 +379,10 @@ TestRunner.prototype.runTest = function(testCase)
 	return new TestResult(testCase.name, passed, msg);
 }
 
-TestRunner.prototype.displayResults = function(element)
-{
-	this.saveState();
-	
-	// TODO: Display results in its own page.
-	
-	if (typeof element === "undefined")
-	{
-		return;
-	}
+TestRunner.prototype.displayResults = function()
+{	
+	// TODO: Prevent double-load.
+	var element = document.getElementById("results");
 	
 	var html =  "<p>Tests executed: " + this.numExecuted + "<br />";
 	html += "Tests passed: " + this.numPassed + "<br />";

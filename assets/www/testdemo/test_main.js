@@ -15,6 +15,24 @@ tests =
 		}
 	]),
 	
+	new TestCase("testPageSwitch", "index.html",
+			[
+				function()
+				{
+					console.log("Changing page...");
+					window.location.href = "page2.html";
+				},
+				function()
+				{
+					var element = document.getElementById("page2");
+					
+					if (!element)
+					{
+						throw "Element 'page2' not found.";
+					}
+				}
+			]),
+	
 	new TestCase("testBeep", "index.html", 
 	[
  		function phase1()
