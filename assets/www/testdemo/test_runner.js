@@ -6,7 +6,8 @@
 
 /*
  * TODO:
- * - potential performance problem with test loop and isTestExecuted - O(n^2)
+ * - potential performance problem with test loop and isTestExecuted - O(n^2) where n is
+ *   number of tests.
  */
 
 /* Test phases:
@@ -67,8 +68,8 @@ function TestRunner(tests, resultElement, before, after)
 	this.before = before;
 	this.after = after;
 	
-	// Initialize test session state.
-	this.initState();
+	// Initialize test state.
+	this.resetState();
 	
 	// Load previous state if test session is active.
 	this.loadState();
@@ -77,7 +78,7 @@ function TestRunner(tests, resultElement, before, after)
 /**
  * Initializes test states.
  */
-TestRunner.prototype.initState = function()
+TestRunner.prototype.resetState = function()
 {
 	this.testsExecuted = new Array();
 	this.errors = new Array();
@@ -112,9 +113,6 @@ TestRunner.prototype.loadState = function()
 	}
 	
 	var json = sessionStorage.testRunnerState;
-	
-	//console.log("Saved state: " + json);
-	
 	if (json)
 	{
 		var state = JSON.parse(json);
@@ -152,11 +150,8 @@ TestRunner.prototype.saveState = function()
  */
 TestRunner.prototype.resetSession = function()
 {
-	sessionStorage.testRunnerActive = false;
+	sessionStorage.testRunnerActive = "false";
 	sessionStorage.testRunnerState = "";
-	
-	// Erase old test runner state.
-	this.initState();
 }
 
 /**
@@ -224,20 +219,25 @@ TestRunner.prototype.loadInitialPage = function(testCase)
 		throw "Invalid test case.";
 	}
 	
-	window.location.href = testCase.page;
+	console.log("Loading initial page in test case: " + testCase.page);
+	
+	window.location = testCase.page;
 }
 
 /**
- * Executes all tests and updates results between tests.
+ * Starts or resumes a test session.
  */
 TestRunner.prototype.run = function()
 {
-	// Get "before" and "after" functions.
-	var before = tests["before"];
-	var after = tests["after"];
+	// Initialize states if not active.
+	if (sessionStorage.testRunnerActive !== "true")
+	{
+		this.resetState();
+		this.resetSession();
+	}
 	
 	// Start test session.
-	sessionStorage.testRunnerActive = true;
+	sessionStorage.testRunnerActive = "true";
 	
 	// Get active or next test case.
 	var testCase;
@@ -247,7 +247,7 @@ TestRunner.prototype.run = function()
 		testCase = this.getTestByName(this.currentTest);
 		if (!testCase)
 		{
-			throw "Internal error: Invalid test name.";
+			throw "Internal error: Invalid test case.";
 		}
 	}
 	else
@@ -269,6 +269,14 @@ TestRunner.prototype.run = function()
 	// Continue/run test.
 	var result = this.runTest(testCase);
 	
+	// Check if script should abort.
+	if (result === false)
+	{
+		// Save state and abort script to let the new page load.
+		this.saveState();
+		return;
+	}
+	
 	// (If this point is reached, the last test phase was executed or all were done in one page.)
 	
 	if (result.passed)
@@ -285,13 +293,12 @@ TestRunner.prototype.run = function()
 	
 	// Get next test, check if done.	
 	testCase = this.getNextTest();
-	if (!testCase)
+	if (testCase == null)
 	{
 		console.log("Testing done.");
 		
-		// End test session (prepare for next run).
-		// TODO: don't erase results.
-		//this.resetSession();
+		// End test session (keep results).
+		this.resetSession();
 		
 		// Save state and display results in new page.
 		this.saveState();
@@ -308,27 +315,36 @@ TestRunner.prototype.run = function()
 }
 
 /**
+ * Start test runner if the test session is still active.
+ */
+TestRunner.prototype.runIfActive = function()
+{
+	if (sessionStorage.testRunnerActive === "true")
+	{
+		console.log("Test session active. Continuing tests...");
+		this.run();
+	}
+}
+
+/**
  * Executes a test.
  * 
  * @param testCase		TestCase object.
- * @return				TestResult object.
+ * @return				TestResult object, or false if script should be aborted.
  */
 TestRunner.prototype.runTest = function(testCase)
 {
 	console.log("Running " + testCase.name + " from phase " + this.currentPhase);
 	
-	// Get "before" and "after" functions.
-	var before = tests["before"];
-	var after = tests["after"];
-	
 	var testFunc = "";
 	var passed = true;		// The test case will fail if any phase fails.
+	var abortScript = false;
 	var msg = "";
 	
 	// Execute "before" if the test was just started.
-	if (typeof before === "function" && this.currentPhase == 0)
+	if (typeof this.before === "function" && this.currentPhase == 0)
 	{
-		before();
+		this.before();
 	}
 	
 	// Loop through phases, starting from current phase.
@@ -338,7 +354,18 @@ TestRunner.prototype.runTest = function(testCase)
 		{
 			// Execute the test.
 			console.log("Running phase " + this.currentPhase);
-			testCase.phases[this.currentPhase]();
+			var phaseResult = testCase.phases[this.currentPhase]();
+			
+			if (phaseResult === false)
+			{
+				// Current phase requires that this script is aborted. In case the page is about to
+				// change, the test runner must stop so the next phase isn't executed before the
+				// new page is loaded.
+				abortScript = true;
+				this.currentPhase++;
+				break;
+			}
+			
 		}
 		catch (err)
 		{
@@ -366,14 +393,18 @@ TestRunner.prototype.runTest = function(testCase)
 		this.currentPhase++;
 	}
 	
-	// TODO: does it reach this line even if a test load a new page? delays?
+	if (abortScript)
+	{
+		return false;
+	}
 	
+	// Test case done or failed. If a test phase change page it should not reach this line.
 	this.currentPhase = 0;
 	
-	// Test case done or failed. Execute "after".
-	if (typeof after === "function")
+	// Execute "after".
+	if (typeof this.after === "function")
 	{
-		after();
+		this.after();
 	}
 	
 	return new TestResult(testCase.name, passed, msg);
@@ -382,6 +413,7 @@ TestRunner.prototype.runTest = function(testCase)
 TestRunner.prototype.displayResults = function()
 {	
 	// TODO: Prevent double-load.
+	
 	var element = document.getElementById("results");
 	
 	var html =  "<p>Tests executed: " + this.numExecuted + "<br />";

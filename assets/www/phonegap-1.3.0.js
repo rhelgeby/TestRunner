@@ -19,6 +19,8 @@
 
 // Version 1.2.0
 
+console.log("Start of phonegap file...");
+
 if (typeof PhoneGap === "undefined") {
 
 /**
@@ -4635,3 +4637,5 @@ PhoneGap.addConstructor(function() {
     }
 });
 }
+
+console.log("End of phonegap file...");

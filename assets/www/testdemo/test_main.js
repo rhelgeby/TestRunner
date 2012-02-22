@@ -1,6 +1,9 @@
 //tests = {};
 testRunner = new TestRunner();
+tests = [];
 
+function buildTests()
+{
 tests =
 [
 	new TestCase("test1", "index.html",
@@ -16,37 +19,38 @@ tests =
 	]),
 	
 	new TestCase("testPageSwitch", "index.html",
-			[
-				function()
-				{
-					console.log("Changing page...");
-					window.location.href = "page2.html";
-				},
-				function()
-				{
-					var element = document.getElementById("page2");
-					
-					if (!element)
-					{
-						throw "Element 'page2' not found.";
-					}
-				}
-			]),
+	[
+		function()
+		{
+			console.log("Changing page...");
+			window.location.href = "page2.html";
+			
+			// Abort script.
+			return false;			
+		},
+		function()
+		{
+			console.log("Phase 2 in page: " + window.location.href);
+			
+			var element = document.getElementById("page2");
+			console.log("page2 element: " + element);
+			
+			if (!element)
+			{
+				throw "Element 'page2' not found.";
+			}
+		}
+	]),
 	
-	new TestCase("testBeep", "index.html", 
+	new TestCase("testVibrate", "index.html", 
 	[
  		function phase1()
  		{
- 			console.log("testBeep executed.");
- 			beep(2);
+ 			console.log("testVibrate executed.");
+ 			vibrate(150);
  		}
  	])
 ];
-
-function prepareRunner()
-{
-	testRunner = new TestRunner(tests, document.getElementById("results"));
-	console.log("TestRunner ready.");
 }
 
 function beforeTest()
@@ -59,44 +63,40 @@ function afterTest()
 	console.log("after");
 }
 
-/*tests.testClickButton = function()
+
+
+// ---- Init ----
+
+console.log("Hook deviceready event");
+document.addEventListener("deviceready", onDeviceReady, true);
+var deviceReadyFired = false;
+
+function init()
 {
-	console.log("click button");
-	var button = document.getElementById("myButton");
-	var status = document.getElementById("buttonStatus");
+	console.log("init (onload)");
+	buildTests();
+	prepareRunner();
 	
-	if (button)
+	setTimeout("run()", 200);
+}
+
+function onDeviceReady()
+{
+	deviceReadyFired = true;
+	console.log("DeviceReady fired...");
+	testRunner.run();
+}
+
+function run()
+{
+	if (!deviceReadyFired)
 	{
-		 button.click();		
-	}
-	
-	// todo: assert
-	if (status.innerHTML != "Clicked.")
-	{
-		throw "Button wasn't clicked.";
+		testRunner.runIfActive();
 	}
 }
 
-tests.testVibrate = function()
+function prepareRunner()
 {
-	vibrate(100);
+	testRunner = new TestRunner(tests, document.getElementById("results"), beforeTest, afterTest);
+	console.log("TestRunner ready on page " + window.location.href);
 }
-
-tests.testBeep = function()
-{
-	beep(2);
-}*/
-
-/*tests.testBenchmark = function()
-{
-	var a = 0;
-	var b = 0;
-	var c = 0;
-	
-	for (var i = 0; i < 10000000; i++)
-	{
-		a = i * 2;
-		b = a * a;
-		c = a + b;
-	}
-}*/

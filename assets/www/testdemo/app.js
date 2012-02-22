@@ -1,10 +1,10 @@
 // Wait for PhoneGap to load
 //
-//document.addEventListener("deviceready", onDeviceReady, false);
+/*document.addEventListener("deviceready", onDeviceReady, false);
 
 // PhoneGap is ready
 //
-/*function onDeviceReady() {
+function onDeviceReady() {
     // Empty
 }*/
 
