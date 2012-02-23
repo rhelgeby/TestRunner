@@ -6,13 +6,11 @@
 
 /*
  * TODO:
- * - potential performance problem with test loop and isTestExecuted - O(n^2) where n is
- *   number of tests.
+ * - Potential performance issue with test loop and isTestExecuted - exponential growth.
  */
 
 /* Test phases:
- * - make sure correct initial page is loaded before each test
- * - phase naming convention
+ * - make sure correct initial page is loaded before each test (without infinite loop, use a flag)
  */
 
 /**
@@ -20,7 +18,9 @@
  * 
  * @param name		Test name.
  * @param passed	Whether the test passed.
- * @param msg		Test result message.
+ * @param msg		(Optional) Test result message.
+ * 
+ * @constructor
  */
 function TestResult(name, passed, msg)
 {
@@ -33,13 +33,16 @@ function TestResult(name, passed, msg)
 /**
  * Constructs a test case.
  * 
- * A test case may have multiple test phases if it needs to change page
+ * A test case is divided into phases with one phase for each page change. One phase may fill a form
+ * and submit, while the next phase will verify results on the new page. If the test doesn't change
+ * page, only one phase is required.
  * 
  * @param name			Test name.
- * @param initialPage	Initial page to load.
- * @param phases		Array with functions for each test phase. Functions must be named "phase"
- * 						followed by a number ("phase1", "phase2", etc.) to assure correct execution
- * 						order.
+ * @param initialPage	Initial page to load before the first phase is executed.
+ * @param phases		Array with functions for each test phase. Phases are executed in the order
+ * 						they appear in the array.
+ * 
+ * @constructor
  */
 function TestCase(name, initialPage, phases)
 {
@@ -51,6 +54,8 @@ function TestCase(name, initialPage, phases)
 
 /**
  * Constructs a test runner.
+ * 
+ * This is the main object.
  * 
  * @param tests				Array of TestCase objects.
  * @param resultElement		(Optional) HTML container element used to display results.
@@ -100,6 +105,8 @@ TestRunner.prototype.verifyJSON = function()
 
 /**
  * Loads test runner state from storage (HTML5 web storage).
+ * 
+ * Note: Does not load if the test session is inactive.
  */
 TestRunner.prototype.loadState = function()
 {
@@ -139,14 +146,13 @@ TestRunner.prototype.saveState = function()
 	state.currentPhase = this.currentPhase;
 	
 	var json = JSON.stringify(state);
-	//console.log(json);
 	sessionStorage.testRunnerState = json;
 }
 
 /**
  * Resets a test session.
  * 
- * Note: A session is automatically started when the testing is started.
+ * Note: A new session is automatically started when the testing is started.
  */
 TestRunner.prototype.resetSession = function()
 {
@@ -189,7 +195,7 @@ TestRunner.prototype.getNextTest = function()
 }
 
 /**
- * Gets a test case.
+ * Gets a test case by name.
  * 
  * @name		Test name.
  * 
@@ -205,10 +211,15 @@ TestRunner.prototype.getTestByName = function(testName)
 			return testCase;
 		}
 	}
+	
+	return null;
 }
 
 /**
  * Loads the initial page of a test case.
+ * 
+ * Note: This function will not stop execution. The page isn't changed until the script is
+ * 		 completed. Don't start new tests or change the state of the test runner.
  * 
  * @param testCase		TestCase object.
  */
@@ -219,9 +230,9 @@ TestRunner.prototype.loadInitialPage = function(testCase)
 		throw "Invalid test case.";
 	}
 	
-	console.log("Loading initial page in test case: " + testCase.page);
+	console.log("Loading initial page for test case: " + testCase.page);
 	
-	window.location = testCase.page;
+	window.location.href = testCase.page;
 }
 
 /**
@@ -247,7 +258,7 @@ TestRunner.prototype.run = function()
 		testCase = this.getTestByName(this.currentTest);
 		if (!testCase)
 		{
-			throw "Internal error: Invalid test case.";
+			throw "Internal error: Current test case is invalid.";
 		}
 	}
 	else
@@ -255,7 +266,7 @@ TestRunner.prototype.run = function()
 		testCase = this.getNextTest();
 		if (!testCase)
 		{
-			// No tests, or all tests done. Display results.
+			// No tests available, or all tests finished. Display results.
 			this.saveState();
 			this.displayResults();
 			return;
@@ -266,10 +277,12 @@ TestRunner.prototype.run = function()
 		this.currentPhase = 0;
 	}
 	
+	// TODO: Load initial page for the first test, without causing infinite loop (use a flag).
+	
 	// Continue/run test.
 	var result = this.runTest(testCase);
 	
-	// Check if script should abort.
+	// Check if script should abort (a test needs to load a new page).
 	if (result === false)
 	{
 		// Save state and abort script to let the new page load.
@@ -277,19 +290,21 @@ TestRunner.prototype.run = function()
 		return;
 	}
 	
-	// (If this point is reached, the last test phase was executed or all were done in one page.)
+	// (If this point is reached, the last test phase was executed, or all phases were finished in
+	// one page.)
 	
+	// Update states.
+	this.numExecuted++;
+	this.testsExecuted.push(testCase.name);
 	if (result.passed)
 	{
 		this.numPassed++;
 	}
 	else
 	{
+		// TODO: Rename errors to results and push all results instead of just errors.
 		this.errors.push(result);
 	}
-	
-	this.numExecuted++;
-	this.testsExecuted.push(testCase.name);
 	
 	// Get next test, check if done.	
 	testCase = this.getNextTest();
@@ -297,7 +312,7 @@ TestRunner.prototype.run = function()
 	{
 		console.log("Testing done.");
 		
-		// End test session (keep results).
+		// End test session (don't reset states, keep results).
 		this.resetSession();
 		
 		// Save state and display results in new page.
@@ -306,16 +321,17 @@ TestRunner.prototype.run = function()
 		return;
 	}
 	
-	// Save state, and load the text test's initial page.
+	// Save state so the next run will resume properly, then load the next test's initial page.
 	console.log ("Next test: " + testCase.name);
 	this.currentTest = testCase.name;
 	this.saveState();
 	this.loadInitialPage(testCase);
 	
+	// Don't do anything now. Let the script end so the page will change.
 }
 
 /**
- * Start test runner if the test session is still active.
+ * Starts the test runner only if a test session is active.
  */
 TestRunner.prototype.runIfActive = function()
 {
@@ -327,21 +343,22 @@ TestRunner.prototype.runIfActive = function()
 }
 
 /**
- * Executes a test.
+ * Starts or resumes a test.
  * 
- * @param testCase		TestCase object.
- * @return				TestResult object, or false if script should be aborted.
+ * @param testCase		Test to run (TestCase object).
+ * 
+ * @return				TestResult object, or false if test runner should be aborted (if the page
+ * 						is changed.
  */
 TestRunner.prototype.runTest = function(testCase)
 {
 	console.log("Running " + testCase.name + " from phase " + this.currentPhase);
 	
-	var testFunc = "";
-	var passed = true;		// The test case will fail if any phase fails.
+	var passed = true;			// The test will fail if any phase fails.
 	var abortScript = false;
 	var msg = "";
 	
-	// Execute "before" if the test was just started.
+	// Execute "before" if available and the test was just started.
 	if (typeof this.before === "function" && this.currentPhase == 0)
 	{
 		this.before();
@@ -362,7 +379,10 @@ TestRunner.prototype.runTest = function(testCase)
 				// change, the test runner must stop so the next phase isn't executed before the
 				// new page is loaded.
 				abortScript = true;
+				
+				// Skip to next phase.
 				this.currentPhase++;
+				
 				break;
 			}
 			
@@ -371,37 +391,40 @@ TestRunner.prototype.runTest = function(testCase)
 		{
 			passed = false;
 			
-			// Assertion failed.
+			// Assertion failed, get error message.
 			if (typeof err === "string")
 			{
 				msg = err;
 			}
 			else if (typeof err === "object")
 			{
+				// Usually a regular JavaScript exception object with a message.
 				msg = err.message;
 			}
 			else
 			{
-				msg = "No error message.";
+				msg = "No error message (unknown error object type).";
 			}
 			
-			// Skip other phases.
+			// Skip all other phases.
 			break;
 		}
 		
-		// Next phase.
+		// Skip to next phase.
 		this.currentPhase++;
 	}
 	
 	if (abortScript)
 	{
+		// Stop here if the page is changed.
 		return false;
 	}
 	
-	// Test case done or failed. If a test phase change page it should not reach this line.
+	// By this point the test finished (done or failed).
+	
 	this.currentPhase = 0;
 	
-	// Execute "after".
+	// Execute "after" if available.
 	if (typeof this.after === "function")
 	{
 		this.after();
@@ -412,8 +435,6 @@ TestRunner.prototype.runTest = function(testCase)
 
 TestRunner.prototype.displayResults = function()
 {	
-	// TODO: Prevent double-load.
-	
 	var element = document.getElementById("results");
 	
 	var html =  "<p>Tests executed: " + this.numExecuted + "<br />";

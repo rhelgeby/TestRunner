@@ -6,15 +6,28 @@ function buildTests()
 {
 tests =
 [
-	new TestCase("test1", "index.html",
+	new TestCase("clickButton", "index.html",
 	[
 		function()
 		{
-			console.log("Phase 1 of test1 executed.");
-		},
-		function()
-		{
-			console.log("Phase 2 of test1 executed.");
+			button = document.getElementById("myButton");
+			result = document.getElementById("buttonStatus");
+			
+			if (!button)
+			{
+				throw "Button not found.";
+			}
+			if (!result)
+			{
+				throw "Result element not found.";
+			}
+			
+			button.click();
+			
+			if (result.innerHTML != "Clicked.")
+			{
+				throw "Button wasn't clicked.";
+			}
 		}
 	]),
 	
@@ -55,12 +68,12 @@ tests =
 
 function beforeTest()
 {
-	console.log("before");
+	console.log("'before' executed");
 }
 
 function afterTest()
 {
-	console.log("after");
+	console.log("'after' executed");
 }
 
 

@@ -1,0 +1,84 @@
+Test Runner
+===========
+
+Requirements:
+* HTML5 Web Storage (the test state between pages is saved here)
+
+
+Creating tests
+--------------
+
+Tests are defined in TestCase objects. Each test case has a name and URL where
+the test is executed.
+
+In case a test will change the page, the test source code is divided into
+phases. A new pahase starts if the page is changed. Each test is required to
+have at least one phase.
+
+Phases are functions stored in an array that's passed to the TestCase
+constructor.
+
+Summary:
+1. Make a JavaScript-file for storing test source code. 
+2. Create a array for storing test cases.
+3. Construct TestCase objects and add them to the test collection array.
+
+Example:
+tests =
+[
+	new TestCase("test1", "index.html",
+	[
+		function()
+		{
+			console.log("Phase 1 of test1 executed.");
+		}
+	]),
+	
+	new TestCase("testPageSwitch", "index.html",
+    [
+        function()
+        {
+            console.log("Changing page...");
+            window.location.href = "page2.html";
+        },
+        function()
+        {
+            var element = document.getElementById("page2");
+            
+            if (!element)
+            {
+                throw "Element 'page2' not found.";
+            }
+        }
+    ])
+];
+
+
+Installation
+------------
+
+Test Runner is installed by including its source in every page in the
+application (at minimum in every page that tests use). Including the test
+source file is also required (every page it's used).
+
+Example:
+<script type="text/javascript" charset="utf-8" src="test_runner.js"></script>
+<script type="text/javascript" charset="utf-8" src="test_main.js"></script>
+
+
+Running tests
+-------------
+
+Construct a new TestRunner object with the test source array as a parameter.
+Eventually it also accepts a HTML element where results are written, and
+function references to "before" and "after" functions.
+
+Use the run() function of TestRunner to start the tests.
+
+The code that constructs and start a TestRunner may be used in a onload event
+to automatically start tests when the page is loaded.
+
+
+Example:
+testRunner = new TestRunner(tests, document.getElementById("results"));
+testRunner.run();
