@@ -1,11 +1,14 @@
-Test Runner
-===========
+Test Runner - Usage
+===================
+
+TODO: This chapter will be outdated and needs to be rewritten after improvements
+      in Test Runner is finished.
 
 Requirements:
 * HTML5 Web Storage (the test state between pages is saved here)
 
 
-Creating tests
+Creating Tests
 --------------
 
 Tests are defined in TestCase objects. Each test case has a name and URL where
@@ -66,7 +69,7 @@ Example:
 <script type="text/javascript" charset="utf-8" src="test_main.js"></script>
 
 
-Running tests
+Running Tests
 -------------
 
 Construct a new TestRunner object with the test source array as a parameter.
@@ -82,3 +85,59 @@ to automatically start tests when the page is loaded.
 Example:
 testRunner = new TestRunner(tests, document.getElementById("results"));
 testRunner.run();
+
+
+Test Runner - Technical Description
+===================================
+
+Goals
+-----
+
+* Automatic. No user interaction should be required (except for starting the
+  application).
+
+* Based on web technologies (HTML5, JavaScript). Makes it platform independent.
+  Lives in the web browser.
+
+* Suitable for function tests in web GUIs as well as regular unit tests.
+
+* Embedded with application, easy to remove when deploying. Avoids complicated
+  protocols and communication methods.
+
+* Compatible with PhoneGap. Designed for use with PhoneGap, but does not depend
+  on it.
+
+
+How Test Runner Works
+---------------------
+
+Test Runner is a tool for running automatic unit tests and function tests in
+web applications. It's written in JavaScript and embedded with the application.
+
+PHASES
+In contrast to regular test cases in other tools, Test Runner support multiple
+phases per tests. Test phases are required when tests need to change the page,
+such as writing text in form fields, submitting and then verifying the result
+in another page. If any phase fail to complete, the test will fail.
+
+SAVING STATE
+Scripts in web pages are terminated when the page is changed. To be able to
+continue testing the test runner state must be saved. The state is serialized
+in JSON format, then saved as a string in a session variable by using the Web
+Storage feature of HTML5.
+
+INITIALIZING TEST RUNNER
+The developer has to build tests and construct a test runner object before
+starting tests. Test cases are stored in an array of TestCase objects. This
+array is passed to the TestRunner constructor.
+
+STARTING TEST RUNNER
+When any page is loaded, the test runner should be initialized and started.
+Eventually a delayed start through a event or timer is required for PhoneGap
+to finish initializing first.
+
+Once the test runner is started it will check if there's an active test session
+and resume its state. If not it will start a new one. Then it will loop through
+tests not yet exectued.
+
+
