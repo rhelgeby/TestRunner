@@ -116,7 +116,7 @@ web applications. It's written in JavaScript and embedded with the application.
 
 PHASES
 In contrast to regular test cases in other tools, Test Runner support multiple
-phases per tests. Test phases are required when tests need to change the page,
+phases per test. Test phases are required when tests need to change the page,
 such as writing text in form fields, submitting and then verifying the result
 in another page. If any phase fail to complete, the test will fail.
 

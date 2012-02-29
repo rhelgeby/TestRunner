@@ -1,12 +1,12 @@
 //tests = {};
-testRunner = new TestRunner();
-tests = [];
+//testRunner = new TestRunner();
+//tests = [];
 
 function buildTests()
 {
-tests =
-[
-	new TestCase("clickButton", "index.html",
+	var testCollection = new TestCollection("MainCollection");
+
+	testCollection.addTest(new TestCase("clickButton", "index.html",
 	[
 		function()
 		{
@@ -29,9 +29,9 @@ tests =
 				throw "Button wasn't clicked.";
 			}
 		}
-	]),
+	]));
 	
-	new TestCase("testPageSwitch", "index.html",
+	testCollection.addTest(new TestCase("testPageSwitch", "index.html",
 	[
 		function()
 		{
@@ -53,17 +53,19 @@ tests =
 				throw "Element 'page2' not found.";
 			}
 		}
-	]),
+	]));
 	
-	new TestCase("testVibrate", "index.html", 
+	testCollection.addTest(new TestCase("testVibrate", "index.html", 
 	[
  		function phase1()
  		{
  			console.log("testVibrate executed.");
  			vibrate(150);
  		}
- 	])
-];
+ 	]));
+	
+	// (Global variable.)
+	testSuite = new TestSuite("MainSuite", [testCollection]);
 }
 
 function beforeTest()
@@ -110,6 +112,6 @@ function run()
 
 function prepareRunner()
 {
-	testRunner = new TestRunner(tests, document.getElementById("results"), beforeTest, afterTest);
+	testRunner = new TestRunner(testSuite, document.getElementById("results"), beforeTest, afterTest);
 	console.log("TestRunner ready on page " + window.location.href);
 }

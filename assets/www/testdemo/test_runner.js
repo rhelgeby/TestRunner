@@ -6,12 +6,9 @@
 
 /*
  * TODO:
- * - Potential performance issue with test loop and isTestExecuted - exponential growth.
- */
-
-/* Test phases:
  * - make sure correct initial page is loaded before each test (without infinite loop, use a flag)
  */
+
 
 /**
  * Constructs a test result object.
@@ -51,29 +48,117 @@ function TestCase(name, initialPage, phases)
 	this.phases = phases;
 }
 
+/**
+ * Constructs a test collection.
+ * 
+ * @param name			Name of collection.
+ * @param tests			(Optional) Array of TestCase objects.
+ * 
+ * @constructor
+ */
+function TestCollection(name, tests)
+{
+	this.name = name;
+	this.tests = (typeof tests === "undefined" ? new Array() : tests);
+	
+	this.validate();
+}
+
+/**
+ * Validates the array of tests. Will throw an exception on error.
+ */
+TestCollection.prototype.validate = function()
+{
+	for (var i in this.tests)
+	{
+		this.validateTestCase(this.tests[i]);
+	}
+}
+
+/**
+ * Validates a test case. Will throw an exception on error.
+ */
+TestCollection.prototype.validateTestCase = function(testCase)
+{
+	if (!(testCase instanceof TestCase))
+	{
+		throw "Invalid test case at index " + i + ". Must be a TestCase object.";
+	}
+}
+
+/**
+ * Adds a test case to the collection. Will throw an exception on error.
+ */
+TestCollection.prototype.addTest = function(testCase)
+{
+	this.validateTestCase(testCase);
+	
+	this.tests.push(testCase);
+}
+
+/**
+ * Constructs a test suite.
+ * 
+ * @param name			Name of test suite (must be unique).
+ * @param collections	Array of TestCollection objects.
+ */
+function TestSuite(name, collections)
+{
+	this.name = name;
+	this.collections = collections;
+	
+	this.validate();
+}
+
+/**
+ * Validates the array of collections. Will throw an exception on error.
+ */
+TestSuite.prototype.validate = function()
+{
+	for (var i in this.collections)
+	{
+		if (!(this.collections[i] instanceof TestCollection))
+		{
+			throw "Invalid collection at index " + i + ". Must be a TestCollection object.";
+		}
+	}
+}
 
 /**
  * Constructs a test runner.
  * 
  * This is the main object.
  * 
- * @param tests				Array of TestCase objects.
+ * @param tests				Tests to run. TestSuite or TestCollection object.
  * @param resultElement		(Optional) HTML container element used to display results.
  * @param before			(Optional) Function executed before every test.
  * @param after				(Optional) Function executed after every test.
  * 
  * @constructor
  */
-function TestRunner(tests, resultElement, before, after)
+function TestRunner(testSuite, resultElement, before, after)
 {
-	this.tests = tests;
+	// Validate test suite.
+	if (!(testSuite instanceof TestSuite))
+	{
+		throw "Invalid test suite. Must be a TestSuite object.";
+	}
+	this.suite = testSuite;
 	
 	this.resultElement = resultElement;
 	
 	this.before = before;
 	this.after = after;
+
+	/**
+	 * Current runner mode. Options
+	 * "all"		- run all tests in all collections
+	 * "collection"	- run all tests in the current collection
+	 * "single"		- run a single test
+	 */
+	this.mode = "all";
 	
-	// Initialize test state.
+	// Initialize test state (creates more attributes).
 	this.resetState();
 	
 	// Load previous state if test session is active.
@@ -88,11 +173,15 @@ TestRunner.prototype.resetState = function()
 	this.testsExecuted = new Array();
 	this.errors = new Array();
 	
+	this.collectionIterator = new ElementIterator(this.suite.collections);
+	this.currentCollection = this.collectionIterator.next();
+	
+	this.testIterator = new ElementIterator(this.currentCollection.elements);
+	this.currentTest = null;
+	this.currentPhase = 0;
+	
 	this.numExecuted = 0;
 	this.numPassed = 0;
-	
-	this.currentTest = "";
-	this.currentPhase = 0;
 }
 
 TestRunner.prototype.verifyJSON = function()
@@ -115,7 +204,7 @@ TestRunner.prototype.loadState = function()
 	// Verify that a test session is active.
 	if (!sessionStorage.testRunnerActive)
 	{
-		// Don't load states when test runner was just loaded.
+		// Don't load states when test runner is loaded for the first time.
 		return;
 	}
 	
@@ -123,12 +212,18 @@ TestRunner.prototype.loadState = function()
 	if (json)
 	{
 		var state = JSON.parse(json);
-		this.testsExecuted = state.testsExecuted;
+		
 		this.errors = state.errors;
+		
+		this.collectionIterator = new ElementIterator(this.suite.collections, state.collectionIteratorState);
+		this.currentCollection = this.collectionIterator.peek();
+		
+		this.testIterator = new ElementIterator(this.currentCollection.elements, state.testIteratorState);
+		this.currentTest = this.testIterator.peek();
+		this.currentPhase = state.currentPhase;
+		
 		this.numExecuted = state.numExecuted;
 		this.numPassed = state.numPassed;
-		this.currentTest = state.currentTest;
-		this.currentPhase = state.currentPhase;
 	}
 }
 
@@ -138,12 +233,15 @@ TestRunner.prototype.loadState = function()
 TestRunner.prototype.saveState = function()
 {
 	var state = {};
-	state.testsExecuted = this.testsExecuted;
+	
 	state.errors = this.errors;
+	
+	state.collectionIteratorState = this.collectionIterator.getState();
+	state.testIteratorState = this.testIterator.getState();
+	state.currentPhase = this.currentPhase;
+	
 	state.numExecuted = this.numExecuted;
 	state.numPassed = this.numPassed;
-	state.currentTest = this.currentTest;
-	state.currentPhase = this.currentPhase;
 	
 	var json = JSON.stringify(state);
 	sessionStorage.testRunnerState = json;
@@ -161,58 +259,38 @@ TestRunner.prototype.resetSession = function()
 }
 
 /**
- * Returns whether a test is executed.
- */
-TestRunner.prototype.isTestExecuted = function(testName)
-{
-	return this.testsExecuted.indexOf(testName) >= 0;
-}
-
-/**
- * Gets the next test that's not yet started.
+ * Proceeds to the next test.
  * 
  * @returns		TestCase object if found, null otherwise.
  */
-TestRunner.prototype.getNextTest = function()
+TestRunner.prototype.nextTest = function()
 {
-	for (var i in this.tests)
+	if (this.mode == "single")
 	{
-		var testCase = this.tests[i];
-		if (testCase instanceof TestCase)
-		{
-			if (!this.isTestExecuted(testCase.name))
-			{
-				return testCase;
-			}
-		}
-		else
-		{
-			throw "Invalid object type in tests array. Must be a TestCase.";
-		}
+		// Only run one test.
+		return null;
 	}
 	
-	return null;
-}
-
-/**
- * Gets a test case by name.
- * 
- * @name		Test name.
- * 
- * @returns		TestCase object, or null if not found.
- */
-TestRunner.prototype.getTestByName = function(testName)
-{
-	for (var i in this.tests)
+	// Get next test from test iterator.
+	if (this.testIterator.hasNext())
 	{
-		var testCase = this.tests[i];
-		if (testCase.name == testName)
-		{
-			return testCase;
-		}
+		this.currentTest = this.testIterator.next();
+		return this.currentTest;
 	}
 	
-	return null;
+	// No more tests in collection. Check if runner should continue.
+	if (this.mode == "collection" || !this.collectionIterator.hasNext())
+	{
+		// Only run tests in the current collection, or no more collections. Tests done.
+		return null;
+	}
+	
+	// Get next collection and test.
+	this.currentCollection = this.collectionIterator.next();
+	this.testIterator = new ElementIterator(this.currentCollection.elements);
+	this.currentTest = this.testIterator.next();
+	
+	return this.currentTest;
 }
 
 /**
@@ -251,20 +329,12 @@ TestRunner.prototype.run = function()
 	sessionStorage.testRunnerActive = "true";
 	
 	// Get active or next test case.
-	var testCase;
-	if (this.currentTest)
+	if (!this.currentTest)
 	{
-		// Get current test case.
-		testCase = this.getTestByName(this.currentTest);
-		if (!testCase)
-		{
-			throw "Internal error: Current test case is invalid.";
-		}
-	}
-	else
-	{
-		testCase = this.getNextTest();
-		if (!testCase)
+		// Prepare next test.
+		this.nextTest();
+		
+		if (!this.currentTest)
 		{
 			// No tests available, or all tests finished. Display results.
 			this.saveState();
@@ -273,14 +343,13 @@ TestRunner.prototype.run = function()
 		}
 		
 		// Initialize test state.
-		this.currentTest = testCase.name;
 		this.currentPhase = 0;
 	}
 	
 	// TODO: Load initial page for the first test, without causing infinite loop (use a flag).
 	
 	// Continue/run test.
-	var result = this.runTest(testCase);
+	var result = this.runTest(this.currentTest);
 	
 	// Check if script should abort (a test needs to load a new page).
 	if (result === false)
@@ -295,7 +364,6 @@ TestRunner.prototype.run = function()
 	
 	// Update states.
 	this.numExecuted++;
-	this.testsExecuted.push(testCase.name);
 	if (result.passed)
 	{
 		this.numPassed++;
@@ -306,9 +374,9 @@ TestRunner.prototype.run = function()
 		this.errors.push(result);
 	}
 	
-	// Get next test, check if done.	
-	testCase = this.getNextTest();
-	if (testCase == null)
+	// Get next test, check if done.
+	this.nextTest();
+	if (!this.currentTest)
 	{
 		console.log("Testing done.");
 		
@@ -321,9 +389,9 @@ TestRunner.prototype.run = function()
 		return;
 	}
 	
-	// Save state so the next run will resume properly, then load the next test's initial page.
-	console.log ("Next test: " + testCase.name);
-	this.currentTest = testCase.name;
+	// There are more tests. Save state so the next run will resume properly, then load the next
+	// test's initial page.
+	console.log ("Next test: " + currentTest.name);
 	this.saveState();
 	this.loadInitialPage(testCase);
 	
@@ -341,6 +409,12 @@ TestRunner.prototype.runIfActive = function()
 		this.run();
 	}
 }
+
+TestRunner.prototype.runCollection = function()
+{
+	// TODO
+}
+
 
 /**
  * Starts or resumes a test.
