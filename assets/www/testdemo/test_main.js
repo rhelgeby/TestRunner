@@ -15,10 +15,7 @@ function buildTests()
 			button = document.getElementById("myButton");
 			result = document.getElementById("buttonStatus");
 			
-			if (!button)
-			{
-				throw "Button not found.";
-			}
+			assertNotUndefined(button, "button not found");
 			if (!result)
 			{
 				throw "Result element not found.";

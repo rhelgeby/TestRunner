@@ -471,10 +471,10 @@ TestRunner.prototype.runTest = function(testCase)
 			{
 				msg = err;
 			}
-			else if (typeof err === "object")
+			else if (err instanceof Error)
 			{
 				// Usually a regular JavaScript exception object with a message.
-				msg = err.message;
+				msg = err.name + ': ' + err.message;
 			}
 			else
 			{

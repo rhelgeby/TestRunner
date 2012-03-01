@@ -1,6 +1,6 @@
-var fail = function AssertException(msg) {
+var fail = function AssertionException(msg) {
 	var err = new Error(msg);
-	err.name = 'AssertException';
+	err.name = 'AssertionException';
 	
 	if(!err.message) {
 		err.message = msg;
