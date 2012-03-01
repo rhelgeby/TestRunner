@@ -1,14 +1,19 @@
 p, a, td, th, li
 {
 	font-family: "Arial";
-	font-size: 0.75em;
+	font-size: 1em;
+}
+
+code
+{
+	word-wrap: break-word;
 }
 
 table.resultTable
 {
 	border-width: 1px;
 	border-style: solid;
-	border-color: #bbbbbb;
+	border-color: #b0b0b0;
 	border-collapse: collapse;
 }
 
@@ -31,10 +36,10 @@ th
 
 tr.testPassed
 {
-	background-color: #44ff44;
+	background-color: #50ff50;
 }
 
 tr.testFailed
 {
-	background-color: #ff4444;
+	background-color: #ff5050;
 }

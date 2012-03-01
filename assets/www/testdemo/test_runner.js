@@ -534,7 +534,7 @@ TestRunner.prototype.buildResults = function()
 	
 	html += "<table class='resultTable'>";
 	
-	html += "<tr><th>Suite</th><th>Collection</th><th>Test</th><th>Message</th>";
+	html += "<tr><th>Collection</th><th>Test</th><th>Message</th>";
 	for (i in this.results)
 	{
 		var result = this.results[i];
@@ -542,7 +542,6 @@ TestRunner.prototype.buildResults = function()
 		var passed = result.passed ? "testPassed" : "testFailed";
 		html += "<tr class='" + passed + "'>";
 		
-		html += "<td>" + result.suite + "</td>";
 		html += "<td>" + result.collection + "</td>";
 		html += "<td>" + result.name + "</td>";
 		html += "<td>" + result.msg + "</td>";
@@ -551,7 +550,9 @@ TestRunner.prototype.buildResults = function()
 	}
 	html += "</table>";
 	
-	// TODO: Print JSON string in a text box.
+	// Print JSON string.
+	var json = JSON.stringify(this.results);
+	html += "<h2>Raw Data</h2><code>" + json + "</code>";
 	
 	element.innerHTML = html;
 	
