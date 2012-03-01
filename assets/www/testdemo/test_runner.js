@@ -176,7 +176,7 @@ TestRunner.prototype.resetState = function()
 	this.collectionIterator = new ElementIterator(this.suite.collections);
 	this.currentCollection = this.collectionIterator.next();
 	
-	this.testIterator = new ElementIterator(this.currentCollection.elements);
+	this.testIterator = new ElementIterator(this.currentCollection.tests);
 	this.currentTest = null;
 	this.currentPhase = 0;
 	
@@ -216,10 +216,10 @@ TestRunner.prototype.loadState = function()
 		this.errors = state.errors;
 		
 		this.collectionIterator = new ElementIterator(this.suite.collections, state.collectionIteratorState);
-		this.currentCollection = this.collectionIterator.peek();
+		this.currentCollection = this.collectionIterator.last();
 		
-		this.testIterator = new ElementIterator(this.currentCollection.elements, state.testIteratorState);
-		this.currentTest = this.testIterator.peek();
+		this.testIterator = new ElementIterator(this.currentCollection.tests, state.testIteratorState);
+		this.currentTest = this.testIterator.last();
 		this.currentPhase = state.currentPhase;
 		
 		this.numExecuted = state.numExecuted;
@@ -268,6 +268,7 @@ TestRunner.prototype.nextTest = function()
 	if (this.mode == "single")
 	{
 		// Only run one test.
+		this.currentTest = null;
 		return null;
 	}
 	
@@ -282,6 +283,7 @@ TestRunner.prototype.nextTest = function()
 	if (this.mode == "collection" || !this.collectionIterator.hasNext())
 	{
 		// Only run tests in the current collection, or no more collections. Tests done.
+		this.currentTest = null;
 		return null;
 	}
 	
@@ -308,7 +310,7 @@ TestRunner.prototype.loadInitialPage = function(testCase)
 		throw "Invalid test case.";
 	}
 	
-	console.log("Loading initial page for test case: " + testCase.page);
+	console.log("Loading initial page for test case " + testCase.name + ": " + testCase.page);
 	
 	window.location.href = testCase.page;
 }
@@ -375,8 +377,7 @@ TestRunner.prototype.run = function()
 	}
 	
 	// Get next test, check if done.
-	this.nextTest();
-	if (!this.currentTest)
+	if (!this.nextTest())
 	{
 		console.log("Testing done.");
 		
@@ -391,9 +392,9 @@ TestRunner.prototype.run = function()
 	
 	// There are more tests. Save state so the next run will resume properly, then load the next
 	// test's initial page.
-	console.log ("Next test: " + currentTest.name);
+	console.log ("Next test: " + this.currentTest.name);
 	this.saveState();
-	this.loadInitialPage(testCase);
+	this.loadInitialPage(this.currentTest);
 	
 	// Don't do anything now. Let the script end so the page will change.
 }

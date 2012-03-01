@@ -6,13 +6,13 @@
  * 
  * This object holds the index of the next element and is suitable for serialization.
  * 
- * @param nextElement	(Optional) Index of the next element.
+ * @param nextElement		Index of next element.
  * 
  * @constructor
  */
 function IteratorState(nextElement)
 {
-	this.nextElement = (typeof nextElement === "undefined" ? 0 : nextElement);
+	this.nextElement = nextElement;
 }
 
 /**
@@ -30,7 +30,7 @@ function ElementIterator(elements, state)
 	}
 	
 	this.elements = elements;
-	this.state = (typeof state === "undefined" ? new IteratorState() : state);
+	this.state = (typeof state === "undefined" ? new IteratorState(0) : state);
 }
 
 /**
@@ -51,13 +51,32 @@ ElementIterator.prototype.next = function()
 }
 
 /**
- * Gets the current element without moving to next element.
+ * Gets the next element without updating the iterator cursor to the next element.
  * 
- * @returns		Current element.
+ * @returns		Next element or null if no more elements.
  */
 ElementIterator.prototype.peek = function()
 {
+	if (!this.hasNext())
+	{
+		return null;
+	}
+	
 	return this.elements[this.state.nextElement];
+}
+
+/**
+ * Gets the previous element retrieved, if any. Does not update the iterator cursor.
+ * 
+ * @returns		Last element or null if none previously retrieved.
+ */
+ElementIterator.prototype.last = function()
+{
+	if (this.state.nextElement > 0)
+	{
+		return this.elements[this.state.nextElement - 1];
+	}
+	return null;
 }
 
 /**
@@ -65,7 +84,7 @@ ElementIterator.prototype.peek = function()
  */
 ElementIterator.prototype.hasNext = function()
 {
-	return this.elements.length >= this.nextElement;
+	return this.elements.length - 1 >= this.state.nextElement;
 }
 
 /**
