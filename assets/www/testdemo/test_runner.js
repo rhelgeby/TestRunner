@@ -134,13 +134,13 @@ TestSuite.prototype.validate = function()
  * This is the main object.
  * 
  * @param tests				Tests to run. TestSuite or TestCollection object.
- * @param resultElement		(Optional) HTML container element used to display results.
+ * @param resultPage		Page for rendering test results results.
  * @param before			(Optional) Function executed before every test.
  * @param after				(Optional) Function executed after every test.
  * 
  * @constructor
  */
-function TestRunner(testSuite, resultElement, before, after)
+function TestRunner(testSuite, resultPage, before, after)
 {
 	// Validate test suite.
 	if (!(testSuite instanceof TestSuite))
@@ -149,7 +149,13 @@ function TestRunner(testSuite, resultElement, before, after)
 	}
 	this.suite = testSuite;
 	
-	this.resultElement = resultElement;
+	
+	if (!(typeof resultPage === "string"))
+	{
+		throw "Invalid result page. Must be a string (page URL).";
+	}
+	
+	this.resultPage = resultPage;
 	
 	this.before = before;
 	this.after = after;
@@ -343,7 +349,7 @@ TestRunner.prototype.run = function()
 		{
 			// No tests available, or all tests finished. Display results.
 			this.saveState();
-			this.displayResults();
+			this.showResults();
 			return;
 		}
 		
@@ -385,7 +391,7 @@ TestRunner.prototype.run = function()
 		
 		// Save state and display results in new page.
 		this.saveState();
-		this.displayResults();
+		this.showResults();
 		return;
 	}
 	
@@ -507,7 +513,18 @@ TestRunner.prototype.runTest = function(testCase)
 	return new TestResult(testCase.name, this.currentCollection.name, this.suite.name, passed, msg);
 }
 
-TestRunner.prototype.displayResults = function()
+/**
+ * Loads the test result page.
+ */
+TestRunner.prototype.showResults = function()
+{
+	window.location.href = this.resultPage;
+}
+
+/**
+ * Builds test results in the element named "results".
+ */
+TestRunner.prototype.buildResults = function()
 {	
 	var element = document.getElementById("results");
 	
@@ -515,13 +532,27 @@ TestRunner.prototype.displayResults = function()
 	html += "Tests passed: " + this.numPassed + "<br />";
 	html += "Tests failed: " + (this.numExecuted - this.numPassed) + "</p>";
 	
-	html += "<p>Results:</p><ul>";
+	html += "<table class='resultTable'>";
+	
+	html += "<tr><th>Suite</th><th>Collection</th><th>Test</th><th>Message</th>";
 	for (i in this.results)
 	{
-		var passed = this.results[i].passed ? "Passed: " : "<strong>Failed:</strong> ";
-		html+= "<li>" + passed + this.results[i].name + ": " + this.results[i].msg + "</li>";
+		var result = this.results[i];
+		
+		var passed = result.passed ? "testPassed" : "testFailed";
+		html += "<tr class='" + passed + "'>";
+		
+		html += "<td>" + result.suite + "</td>";
+		html += "<td>" + result.collection + "</td>";
+		html += "<td>" + result.name + "</td>";
+		html += "<td>" + result.msg + "</td>";
+		
+		html += "</tr>";
 	}
-	html += "<ul>";
+	html += "</table>";
+	
+	// TODO: Print JSON string in a text box.
 	
 	element.innerHTML = html;
+	
 }
