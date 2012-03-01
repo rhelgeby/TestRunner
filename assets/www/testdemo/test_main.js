@@ -1,7 +1,3 @@
-//tests = {};
-//testRunner = new TestRunner();
-//tests = [];
-
 function buildTests()
 {
 	var testCollection = new TestCollection("MainCollection");
@@ -189,7 +185,8 @@ function run()
 {
 	if (!deviceReadyFired)
 	{
-		testRunner.runIfActive();
+		//testRunner.run();			// Automatic.
+		testRunner.runIfActive();	// Manual start.
 	}
 }
 
