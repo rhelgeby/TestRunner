@@ -13,15 +13,19 @@
 /**
  * Constructs a test result object.
  * 
- * @param name		Test name.
- * @param passed	Whether the test passed.
- * @param msg		(Optional) Test result message.
+ * @param name			Test name.
+ * @param collection	Collection name.
+ * @param suite			Test suite name.
+ * @param passed		Whether the test passed.
+ * @param msg			(Optional) Test result message.
  * 
  * @constructor
  */
-function TestResult(name, passed, msg)
+function TestResult(name, collection, suite, passed, msg)
 {
 	this.name = name;
+	this.collection = collection;
+	this.suite = suite;
 	this.passed = passed;
 	this.msg = msg;
 }
@@ -170,8 +174,7 @@ function TestRunner(testSuite, resultElement, before, after)
  */
 TestRunner.prototype.resetState = function()
 {
-	this.testsExecuted = new Array();
-	this.errors = new Array();
+	this.results = new Array();
 	
 	this.collectionIterator = new ElementIterator(this.suite.collections);
 	this.currentCollection = this.collectionIterator.next();
@@ -213,7 +216,7 @@ TestRunner.prototype.loadState = function()
 	{
 		var state = JSON.parse(json);
 		
-		this.errors = state.errors;
+		this.results = state.results;
 		
 		this.collectionIterator = new ElementIterator(this.suite.collections, state.collectionIteratorState);
 		this.currentCollection = this.collectionIterator.last();
@@ -234,7 +237,7 @@ TestRunner.prototype.saveState = function()
 {
 	var state = {};
 	
-	state.errors = this.errors;
+	state.results = this.results;
 	
 	state.collectionIteratorState = this.collectionIterator.getState();
 	state.testIteratorState = this.testIterator.getState();
@@ -366,14 +369,10 @@ TestRunner.prototype.run = function()
 	
 	// Update states.
 	this.numExecuted++;
+	this.results.push(result);
 	if (result.passed)
 	{
 		this.numPassed++;
-	}
-	else
-	{
-		// TODO: Rename errors to results and push all results instead of just errors.
-		this.errors.push(result);
 	}
 	
 	// Get next test, check if done.
@@ -505,7 +504,7 @@ TestRunner.prototype.runTest = function(testCase)
 		this.after();
 	}
 	
-	return new TestResult(testCase.name, passed, msg);
+	return new TestResult(testCase.name, this.currentCollection.name, this.suite.name, passed, msg);
 }
 
 TestRunner.prototype.displayResults = function()
@@ -516,10 +515,11 @@ TestRunner.prototype.displayResults = function()
 	html += "Tests passed: " + this.numPassed + "<br />";
 	html += "Tests failed: " + (this.numExecuted - this.numPassed) + "</p>";
 	
-	html += "<p>Errors:</p><ul>";
-	for (i in this.errors)
+	html += "<p>Results:</p><ul>";
+	for (i in this.results)
 	{
-		html+= "<li>" + this.errors[i].name + ": " + this.errors[i].msg + "</li>";
+		var passed = this.results[i].passed ? "Passed: " : "<strong>Failed:</strong> ";
+		html+= "<li>" + passed + this.results[i].name + ": " + this.results[i].msg + "</li>";
 	}
 	html += "<ul>";
 	
