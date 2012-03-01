@@ -1,3 +1,8 @@
+//asserts.js
+//Tor Magnus Rakvåg
+
+//Inspired by jstestrunner
+
 var fail = function AssertionException(msg) {
 	var err = new Error(msg);
 	err.name = 'AssertionException';
