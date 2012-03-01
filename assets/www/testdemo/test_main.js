@@ -157,38 +157,53 @@ function afterTest()
 
 
 // ---- Init ----
-
-console.log("Hook deviceready event");
 document.addEventListener("deviceready", onDeviceReady, true);
 var deviceReadyFired = false;
+var displayResults = false;
 
-function init()
+function init(results)
 {
-	console.log("init (onload)");
+	displayResults = results;
+	
 	buildTests();
 	prepareRunner();
 	
-	setTimeout("run()", 200);
+	setTimeout("eventFallback()", 200);
 }
 
 function onDeviceReady()
 {
-	deviceReadyFired = true;
-	console.log("DeviceReady fired...");
-	testRunner.run();
+	if (!deviceReadyFired)
+	{
+		deviceReadyFired = true;
+		console.log("DeviceReady fired...");
+		run();
+	}
+}
+
+function eventFallback()
+{
+	if (!deviceReadyFired)
+	{
+		run();
+	}
 }
 
 function run()
 {
-	if (!deviceReadyFired)
+	if (displayResults)
 	{
-		//testRunner.run();			// Automatic.
-		testRunner.runIfActive();	// Manual start.
+		testRunner.buildResults();
+	}
+	else
+	{
+		testRunner.run();			// Automatic.
+		//testRunner.runIfActive();	// Manual start.
 	}
 }
 
 function prepareRunner()
 {
-	testRunner = new TestRunner(testSuite, document.getElementById("results"), beforeTest, afterTest);
+	testRunner = new TestRunner(testSuite, "test_results.html", beforeTest, afterTest);
 	console.log("TestRunner ready on page " + window.location.href);
 }
