@@ -289,7 +289,7 @@ TestRunner.prototype.nextTest = function()
 	
 	// Get next collection and test.
 	this.currentCollection = this.collectionIterator.next();
-	this.testIterator = new ElementIterator(this.currentCollection.elements);
+	this.testIterator = new ElementIterator(this.currentCollection.tests);
 	this.currentTest = this.testIterator.next();
 	
 	return this.currentTest;
