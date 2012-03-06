@@ -31,11 +31,12 @@ function failTest(msg) {
 	fail(typeof msg === 'undefined' ? 'Test failed by default.' : msg);
 }
 
+// Doesn't work right now, test_runner catches it
 function assertNoException(func, msg) {
 	try{
 		func();
 	}catch(e){
-		fail(typeof msg === 'undefined' ? 'expected no exception but threw: ' + e.message : msg);
+		fail(typeof msg === 'undefined' ? 'expected no exception but threw: ' + e.name + '(' + e.message + ')' : msg);
 	}
 	return true;
 }
