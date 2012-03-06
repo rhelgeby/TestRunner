@@ -35,8 +35,9 @@ function assertNoException(func, msg) {
 	try{
 		func();
 	}catch(e){
-		fail(typeof msg === 'undefined' ? func + ' expected no exception but threw: ' + e.message : msg);
+		fail(typeof msg === 'undefined' ? 'expected no exception but threw: ' + e.message : msg);
 	}
+	return true;
 }
 
 function assertTagName(tagName, element, msg) {
