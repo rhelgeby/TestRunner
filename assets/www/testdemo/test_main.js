@@ -1,10 +1,10 @@
 function buildTests()
 {
-	var testCollection = new TestCollection("MainCollection");
-	var testCollection2 = new TestCollection("SecondCollection");
-	var testCollection3 = new TestCollection("ThirdCollection");
+	var testCollection = new TestCollection("Main Collection");
+	var testCollection2 = new TestCollection("Second Collection");
+	var testCollection3 = new TestCollection("Third Collection");
 	
-	testCollection.addTest(new TestCase("clickButton", "index.html",
+	testCollection.addTest(new TestCase("click button", "index.html",
 	[
 		function()
 		{
@@ -26,7 +26,7 @@ function buildTests()
 		}
 	]));
 	
-	testCollection.addTest(new TestCase("testPageSwitch", "index.html",
+	testCollection.addTest(new TestCase("switch page", "index.html",
 	[
 		function()
 		{
@@ -50,7 +50,7 @@ function buildTests()
 		}
 	]));
 	
-	testCollection.addTest(new TestCase("testVibrate", "index.html", 
+	testCollection.addTest(new TestCase("vibrate", "index.html", 
 	[
  		function phase1()
  		{
@@ -62,7 +62,7 @@ function buildTests()
 	
 	// ----- Second collection -----
 	
-	testCollection2.addTest(new TestCase("clickButton2", "index.html",
+	testCollection2.addTest(new TestCase("click button 2", "index.html",
 	[
 		function()
 		{
@@ -87,7 +87,7 @@ function buildTests()
 		}
 	]));
 	
-	testCollection2.addTest(new TestCase("testPageSwitch2", "index.html",
+	testCollection2.addTest(new TestCase("switch page 2", "index.html",
 	[
 		function()
 		{
@@ -111,7 +111,7 @@ function buildTests()
 		}
 	]));
 	
-	testCollection2.addTest(new TestCase("testVibrate2", "index.html", 
+	testCollection2.addTest(new TestCase("vibrate 2", "index.html", 
 	[
  		function phase1()
  		{
@@ -123,7 +123,7 @@ function buildTests()
 	
 	// ----- Third collection -----
 	
-	testCollection3.addTest(new TestCase("dummy2", "index.html",
+	testCollection3.addTest(new TestCase("fail test", "index.html",
 	[
 		function()
 		{
@@ -132,7 +132,7 @@ function buildTests()
 		}
 	]));
 	
-	testCollection3.addTest(new TestCase("dummy1", "index.html",
+	testCollection3.addTest(new TestCase("a test with a very long name", "index.html",
 	[
 		function()
 		{
@@ -145,7 +145,7 @@ function buildTests()
 	
 	// (testSuite must be global; not using var keyword.)
 	
-	testSuite = new TestSuite("MainSuite", [testCollection, testCollection2, testCollection3]);
+	testSuite = new TestSuite("All tests", [testCollection, testCollection2, testCollection3], beforeTest, afterTest);
 	//testSuite = new TestSuite("MainSuite", [testCollection, testCollection3]);
 	//testSuite = new TestSuite("EmptySuite", [emptyCollection]);
 }
@@ -174,7 +174,7 @@ function init(results)
 	buildTests();
 	prepareRunner();
 	
-	setTimeout("eventFallback()", 200);
+	setTimeout("eventFallback()", 150);
 }
 
 function onDeviceReady()
@@ -210,6 +210,6 @@ function run()
 
 function prepareRunner()
 {
-	testRunner = new TestRunner(testSuite, "test_results.html", beforeTest, afterTest);
+	testRunner = new TestRunner(testSuite, "test_results.html");
 	console.log("TestRunner ready on page " + window.location.href);
 }

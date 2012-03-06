@@ -9,6 +9,11 @@ code
 	word-wrap: break-word;
 }
 
+table.statsTable td
+{
+	border-width: 0px;
+}
+
 table.resultTable
 {
 	width: 100%;
@@ -38,7 +43,7 @@ th
 
 th.test
 {
-	width: 150px;
+	width: 125px;
 }
 
 caption

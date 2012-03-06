@@ -38,6 +38,11 @@ function TestResult(name, collection, suite, passed, msg)
  * and submit, while the next phase will verify results on the new page. If the test doesn't change
  * page, only one phase is required.
  * 
+ * The test is considered passed if no exceptions are thrown.
+ * 
+ * If a test need to load a new page, the test runner can be aborted by returning false in any test
+ * phase. When aborted, the test progress will be saved so it can resume testing on the new page.
+ * 
  * @param name			Test name.
  * @param initialPage	Initial page to load before the first phase is executed.
  * @param phases		Array with functions for each test phase. Phases are executed in the order
@@ -50,7 +55,29 @@ function TestCase(name, initialPage, phases)
 	this.name = name;
 	this.page = initialPage;
 	this.phases = phases;
+	
+	this.validate();
 }
+
+/**
+ * Validates the test case. Throws an exception on error.
+ */
+TestCase.prototype.validate = function()
+{
+	if (!(this.phases instanceof Array))
+	{
+		throw "Invalid test phase data. Must be an array of functions.";
+	}
+	
+	for (i in this.phases)
+	{
+		if (typeof this.phases[i] !== "function")
+		{
+			throw "Invalid test phase at index " + i + ". Must be a function.";
+		}
+	}
+}
+
 
 /**
  * Constructs a test collection.
@@ -80,7 +107,7 @@ TestCollection.prototype.validate = function()
 }
 
 /**
- * Validates a test case. Will throw an exception on error.
+ * Validates a test case. Throws an exception on error.
  */
 TestCollection.prototype.validateTestCase = function(testCase)
 {
@@ -91,7 +118,7 @@ TestCollection.prototype.validateTestCase = function(testCase)
 }
 
 /**
- * Adds a test case to the collection. Will throw an exception on error.
+ * Adds a test case to the collection. Throws an exception on error.
  */
 TestCollection.prototype.addTest = function(testCase)
 {
@@ -103,19 +130,23 @@ TestCollection.prototype.addTest = function(testCase)
 /**
  * Constructs a test suite.
  * 
- * @param name			Name of test suite (must be unique).
+ * @param name			Name of test suite.
  * @param collections	Array of TestCollection objects.
+ * @param before		(Optional) Function executed before every test.
+ * @param after			(Optional) Function executed after every test.
  */
-function TestSuite(name, collections)
+function TestSuite(name, collections, before, after)
 {
 	this.name = name;
 	this.collections = collections;
+	this.before = before;
+	this.after = after;
 	
 	this.validate();
 }
 
 /**
- * Validates the array of collections. Will throw an exception on error.
+ * Validates the array of collections. Throws an exception on error.
  */
 TestSuite.prototype.validate = function()
 {
@@ -135,12 +166,10 @@ TestSuite.prototype.validate = function()
  * 
  * @param tests				Tests to run. TestSuite or TestCollection object.
  * @param resultPage		Page for rendering test results results.
- * @param before			(Optional) Function executed before every test.
- * @param after				(Optional) Function executed after every test.
  * 
  * @constructor
  */
-function TestRunner(testSuite, resultPage, before, after)
+function TestRunner(testSuite, resultPage)
 {
 	// Validate test suite.
 	if (!(testSuite instanceof TestSuite))
@@ -157,9 +186,9 @@ function TestRunner(testSuite, resultPage, before, after)
 	
 	this.resultPage = resultPage;
 	
-	this.before = before;
-	this.after = after;
-
+	this.before = this.suite.before;
+	this.after = this.suite.after;
+	
 	/**
 	 * Current runner mode. Options
 	 * "all"		- run all tests in all collections
@@ -416,12 +445,6 @@ TestRunner.prototype.runIfActive = function()
 	}
 }
 
-TestRunner.prototype.runCollection = function()
-{
-	// TODO
-}
-
-
 /**
  * Starts or resumes a test.
  * 
@@ -530,18 +553,21 @@ TestRunner.prototype.buildResults = function()
 	var collection = null;
 	var startTable = true;
 	var endTable = false;
-	
+	var html = "";
 	
 	// Build status bar.
 	var numFailed = this.numExecuted - this.numPassed;
 	var failed = numFailed > 0 ? "failedBar" : "passedBar";
 	
-	var html = "<div class='statusBar' id='" + failed + "'></div>";
+	html += "<div class='statusBar' id='" + failed + "'></div>";
 	
-	html +=  "<p>Tests executed: " + this.numExecuted + "<br />";
-	html += "Tests passed: " + this.numPassed + "<br />";
-	html += "Tests failed: " + numFailed + "</p>";
-	
+	// Statistics.
+	html += "<table class='statsTable'>";
+	html += "<tr><td>Test suite:</td><td>" + this.suite.name + "</td></tr>";
+	html += "<tr><td>Tests executed:</td><td>" + this.numExecuted + "</td></tr>";
+	html += "<tr><td>Tests passed:</td><td>" + this.numPassed + "</td></tr>";
+	html += "<tr><td>Tests failed:</td><td>" + numFailed + "</td></tr>";
+	html += "</table>";
 	
 	// Build result tables.
 	for (i in this.results)
@@ -596,5 +622,4 @@ TestRunner.prototype.buildResults = function()
 	html += "<h1>Raw Data</h1><code>" + json + "</code>";
 	
 	element.innerHTML = html;
-	
 }
