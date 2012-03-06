@@ -1,7 +1,7 @@
 //asserts.js
 //Tor Magnus Rakvåg
 
-//Inspired by jstestrunner
+//Based (sort of) on jstestrunner Asserts.js
 
 var fail = function AssertionException(msg) {
 	var err = new Error(msg);
@@ -14,10 +14,6 @@ var fail = function AssertionException(msg) {
 	throw err;
 };
 
-/*AssertException.prototype.toString = function () {
-  return 'AssertException: ' + this.message;
-}*/
-
 function _isArray(obj) {
 	if(!obj.constructor.toString().indexof("Array" == -1)) {	
 		return true;
@@ -29,6 +25,20 @@ function assert(actual, message) {
   if (!actual) {
     fail(message);
   }
+}
+
+function assertTagName(tagName, element, msg) {
+	var actual = element && element.tagName;
+	if (String(actual).toUpperCase() != tagName.toUpperCase()) {
+		fail(typeof msg === 'undefined' ? 'Expected tagName to be ' + tagName + ' but was ' + actual : msg);
+	}
+}
+
+function assertElementId(element, id, msg) {
+	var actual = element && element.id;
+	if (actual !== id) {
+		fail(typeof msg === 'undefined' ? 'Expected id to be ' + id + ' but was ' + actual : msg);
+	}
 }
 
 function assertTrue(actual, msg) {
