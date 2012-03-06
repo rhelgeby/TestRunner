@@ -27,6 +27,14 @@ function assert(actual, message) {
   }
 }
 
+function assertNoException(func, msg) {
+	try{
+		func;
+	}catch(e){
+		fail(typeof msg === 'undefined' ? func + ' expected no exception but threw: ' + e.message : msg);
+	}
+}
+
 function assertTagName(tagName, element, msg) {
 	var actual = element && element.tagName;
 	if (String(actual).toUpperCase() != tagName.toUpperCase()) {
