@@ -27,9 +27,13 @@ function assert(actual, message) {
   }
 }
 
+function failTest(msg) {
+	fail(typeof msg === 'undefined' ? 'Test failed by default.' : msg);
+}
+
 function assertNoException(func, msg) {
 	try{
-		func;
+		func();
 	}catch(e){
 		fail(typeof msg === 'undefined' ? func + ' expected no exception but threw: ' + e.message : msg);
 	}
