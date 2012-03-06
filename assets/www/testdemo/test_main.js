@@ -140,8 +140,14 @@ function buildTests()
 		}
 	]));
 	
-	// (Global variable.)
+	
+	var emptyCollection = new TestCollection("Empty collection", []);
+	
+	// (testSuite must be global; not using var keyword.)
+	
 	testSuite = new TestSuite("MainSuite", [testCollection, testCollection2, testCollection3]);
+	//testSuite = new TestSuite("MainSuite", [testCollection, testCollection3]);
+	//testSuite = new TestSuite("EmptySuite", [emptyCollection]);
 }
 
 function beforeTest()

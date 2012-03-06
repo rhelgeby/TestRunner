@@ -527,32 +527,73 @@ TestRunner.prototype.showResults = function()
 TestRunner.prototype.buildResults = function()
 {	
 	var element = document.getElementById("results");
+	var collection = null;
+	var startTable = true;
+	var endTable = false;
 	
-	var html =  "<p>Tests executed: " + this.numExecuted + "<br />";
+	
+	// Build status bar.
+	var numFailed = this.numExecuted - this.numPassed;
+	var failed = numFailed > 0 ? "failedBar" : "passedBar";
+	
+	var html = "<div class='statusBar' id='" + failed + "'></div>";
+	
+	html +=  "<p>Tests executed: " + this.numExecuted + "<br />";
 	html += "Tests passed: " + this.numPassed + "<br />";
-	html += "Tests failed: " + (this.numExecuted - this.numPassed) + "</p>";
+	html += "Tests failed: " + numFailed + "</p>";
 	
-	html += "<table class='resultTable'>";
 	
-	html += "<tr><th>Collection</th><th>Test</th><th>Message</th>";
+	// Build result tables.
 	for (i in this.results)
 	{
 		var result = this.results[i];
 		
+		// Check if collection has changed.
+		if (collection === null)
+		{
+			// Initial collection.
+			collection = result.collection;
+		}
+		else if (collection != result.collection)
+		{
+			// New collection.
+			collection = result.collection;
+			endTable = true;
+			startTable = true;
+		}
+		
+		if (endTable)
+		{
+			// End previous table.
+			html += "</table>";
+			endTable = false;
+		}
+		if (startTable)
+		{
+			// Start new table.
+			html += "<table class='resultTable'><caption>" + result.collection + "</caption>";
+			html += "<tr><th class='test'>Test</th><th class='message'>Message</th>";
+			startTable = false;
+		}
+		
 		var passed = result.passed ? "testPassed" : "testFailed";
 		html += "<tr class='" + passed + "'>";
 		
-		html += "<td>" + result.collection + "</td>";
 		html += "<td>" + result.name + "</td>";
 		html += "<td>" + result.msg + "</td>";
 		
 		html += "</tr>";
 	}
-	html += "</table>";
+	
+	// End last table.
+	if (this.results.length > 0 && !endTable)
+	{
+		html += "</table>";
+	}
 	
 	// Print JSON string.
 	var json = JSON.stringify(this.results);
-	html += "<h2>Raw Data</h2><code>" + json + "</code>";
+	html += "<h1>Raw Data</h1><code>" + json + "</code>";
 	
 	element.innerHTML = html;
 	
