@@ -14,11 +14,16 @@ Test Runner is installed by including its source in every page in the
 application (at minimum in every page that tests use). In addition the test
 case code must be included (test_main.js).
 
-Example (added in every page where tests are executed):
-<script type="text/javascript" charset="utf-8" src="test_iterator.js"></script>
-<script type="text/javascript" charset="utf-8" src="assert.js"></script>
-<script type="text/javascript" charset="utf-8" src="test_runner.js"></script>
-<script type="text/javascript" charset="utf-8" src="test_main.js"></script>
+Note: All test code must be loaded in all pages where tests are executed. If
+      some tests are excluded in some pages, the test progress state will be
+      corrupt.
+
+Example:
+
+    <script type="text/javascript" charset="utf-8" src="test_iterator.js"></script>
+    <script type="text/javascript" charset="utf-8" src="assert.js"></script>
+    <script type="text/javascript" charset="utf-8" src="test_runner.js"></script>
+    <script type="text/javascript" charset="utf-8" src="test_main.js"></script>
 
 
 Creating Tests
@@ -187,6 +192,11 @@ of HTML5.
 Every time Test Runner is loaded, the state is restored if a test session is
 still active.
 
+Note: Include all tests in every page tests are executed. The test progress is
+      based on counters in iterators. If some tests are excluded in other pages
+      the counter may point to wrong tests (and possibly create a infinite
+      loop), or point to a invalid array index.
+
 
 INITIALIZING TEST RUNNER
 The developer has to build tests and construct a TestRunner object before
@@ -242,5 +252,5 @@ and after each test.
 TEST RUNNER
 The main object. Manages state and execute tests.
 
-The only "public" methods are run and runIfActive. All others are considered
-private and should not be called directly.
+The only "public" methods are run, runIfActive and buildResults. All others are
+considered private and should not be called directly.
