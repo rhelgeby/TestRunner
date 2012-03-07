@@ -172,6 +172,7 @@ function init(results)
 	displayResults = results;
 	
 	buildTests();
+	buildSelfTests();
 	prepareRunner();
 	
 	setTimeout("eventFallback()", 150);
@@ -210,6 +211,9 @@ function run()
 
 function prepareRunner()
 {
-	testRunner = new TestRunner(testSuite, "test_results.html");
+	//var suite = testSuite;
+	var suite = selfTestSuite;
+	
+	testRunner = new TestRunner(suite, "test_results.html");
 	console.log("TestRunner ready on page " + window.location.href);
 }
