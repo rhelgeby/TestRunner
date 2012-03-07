@@ -4,11 +4,6 @@
 // Credits/Sources:
 // JUnit
 
-/*
- * TODO:
- * - make sure correct initial page is loaded before each test (without infinite loop, use a flag)
- */
-
 
 /**
  * Constructs a test result object.
@@ -218,6 +213,9 @@ TestRunner.prototype.resetState = function()
 	this.currentTest = null;
 	this.currentPhase = 0;
 	
+	// Whether the page was recently changed to initialize a test.
+	this.pageChanged = false;
+	
 	this.numExecuted = 0;
 	this.numPassed = 0;
 }
@@ -259,6 +257,7 @@ TestRunner.prototype.loadState = function()
 		this.testIterator = new ElementIterator(this.currentCollection.tests, state.testIteratorState);
 		this.currentTest = this.testIterator.last();
 		this.currentPhase = state.currentPhase;
+		this.pageChanged = state.pageChanged;
 		
 		this.numExecuted = state.numExecuted;
 		this.numPassed = state.numPassed;
@@ -277,6 +276,7 @@ TestRunner.prototype.saveState = function()
 	state.collectionIteratorState = this.collectionIterator.getState();
 	state.testIteratorState = this.testIterator.getState();
 	state.currentPhase = this.currentPhase;
+	state.pageChanged = this.pageChanged;
 	
 	state.numExecuted = this.numExecuted;
 	state.numPassed = this.numPassed;
@@ -351,6 +351,7 @@ TestRunner.prototype.loadInitialPage = function(testCase)
 	console.log("Loading initial page for test case " + testCase.name + ": " + testCase.page);
 	
 	window.location.href = testCase.page;
+	this.pageChanged = true;
 }
 
 /**
@@ -386,15 +387,28 @@ TestRunner.prototype.run = function()
 		this.currentPhase = 0;
 	}
 	
-	// TODO: Load initial page for the first test, without causing infinite loop (use a flag).
+	// Load initial page in test if not already changed.
+	if (!this.pageChanged)
+	{
+		this.loadInitialPage(this.currentTest);
+		this.pageChanged = true;
+		this.saveState();
+		return;
+	}
+	else
+	{
+		// Page was recently changed, reset flag.
+		this.pageChanged = false;
+	}
 	
-	// Continue/run test.
+	// Run or resume test.
 	var result = this.runTest(this.currentTest);
 	
 	// Check if script should abort (a test needs to load a new page).
 	if (result === false)
 	{
 		// Save state and abort script to let the new page load.
+		this.pageChanged = true;
 		this.saveState();
 		return;
 	}
